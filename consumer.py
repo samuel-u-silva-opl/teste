@@ -14,14 +14,38 @@ from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.pika import PikaInstrumentor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry.sdk._logs import LoggingHandler, LoggerProvider
+from opentelemetry.sdk._logs.export import (
+    BatchLogRecordProcessor,
+    OTLPLogExporter,
+)
+from opentelemetry._logs import set_logger_provider, get_logger_provider
+
 
 # --- Inicializa OpenTelemetry ---
 resource = Resource(attributes={"service.name": "rabbitmq-consumer"})
 
+# Configure OpenTelemetry Logs
+log_exporter = OTLPLogExporter(endpoint="http://openlia_grafana:4317", insecure=True)
+
+logger_provider = LoggerProvider()
+logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+set_logger_provider(logger_provider)
+
+otel_logger = get_logger_provider().get_logger(__name__)
+
+# Logging padrão (ainda envia ao Docker stdout)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+stdout_logger = logging.getLogger(__name__)
+stdout_logger.setLevel(logging.INFO)
+
+# Encaminha também para o OTEL Log
+stdout_logger.addHandler(LoggingHandler(level=logging.INFO))
+
 # Tracing
 trace.set_tracer_provider(TracerProvider(resource=resource))
 tracer = trace.get_tracer(__name__)
-span_processor = BatchSpanProcessor(OTLPSpanExporter(endpoint="http://openlia_grafana:4317", insecure=True))
+span_processor = BatchSpanProcessor(OTLPSpanExporter(endpoint="http://openlia_grafana:4317/", insecure=True))
 trace.get_tracer_provider().add_span_processor(span_processor)
 
 # Métricas
