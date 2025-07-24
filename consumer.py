@@ -21,12 +21,12 @@ resource = Resource(attributes={"service.name": "rabbitmq-consumer"})
 # Tracing
 trace.set_tracer_provider(TracerProvider(resource=resource))
 tracer = trace.get_tracer(__name__)
-span_processor = BatchSpanProcessor(OTLPSpanExporter(endpoint="http://otel-collector:4317", insecure=True))
+span_processor = BatchSpanProcessor(OTLPSpanExporter(endpoint="http://openlia_grafana:4317", insecure=True))
 trace.get_tracer_provider().add_span_processor(span_processor)
 
 # Métricas
 metric_reader = PeriodicExportingMetricReader(
-    OTLPMetricExporter(endpoint="http://otel-collector:4317", insecure=True)
+    OTLPMetricExporter(endpoint="http://openlia_grafana:4317", insecure=True)
 )
 metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=[metric_reader]))
 meter = metrics.get_meter(__name__)
